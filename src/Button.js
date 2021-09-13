@@ -10,10 +10,11 @@ export class Button {
 
         btn.innerText = this.label
 
-        this.classes.forEach(element => {
-            btn.classList.add(element)
-        })
-
+        if (Array.isArray(this.classes)) {
+            this.classes.forEach(element => {
+                btn.classList.add(element)
+            })
+        }
         btn.addEventListener(
             'click',
             () => this.onClick("dziala")
