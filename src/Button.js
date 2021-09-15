@@ -17,7 +17,7 @@ export class Button {
         }
         btn.addEventListener(
             'click',
-            () => this.onClick("dziala")
+            () => this.onClick()
         )
 
         return btn
