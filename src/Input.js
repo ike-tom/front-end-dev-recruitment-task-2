@@ -5,6 +5,7 @@ export class Input {
         this.type = type
         this.isRequired = isRequired
         this.id = id
+
     }
     render() {
         const input = document.createElement("input")
