@@ -116,7 +116,7 @@ export class App {
         console.log("usun wiersz")
     }
 
-    onNewToDoSubmit() {
+    onNewCarSubmit() {
         const input1 = document.getElementById("brand")
         const input2 = document.getElementById("model")
         const input3 = document.getElementById("production-year")
@@ -200,7 +200,7 @@ export class App {
         const labelElement3 = new Label("Rok produkcji", ['input-group-text', 'col'])
 
         const submitButton = new Button("DODAJ", () => {
-            this.onNewToDoSubmit()
+            this.onNewCarSubmit()
             this.sort()
         }, ['btn', 'btn-outline-success', "w-100"])
 
