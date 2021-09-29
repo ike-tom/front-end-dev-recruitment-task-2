@@ -29,6 +29,7 @@ export class Table {
                 tableHeaderElement.dataset.field = element
                 tableHeaderElement.setAttribute("scope", "col")
                 tableHeaderElement.classList.add("pe-auto", "align-middle")
+                tableHeaderElement.addEventListener("click", () => this.onClick())
 
                 tableRow.appendChild(tableHeaderElement)
 

@@ -1,17 +1,18 @@
 import Input from "./Input";
 import Button from "./Button";
-import { Label } from "./Label";
+import Label from "./Label";
 import InputGroup from "./InputGroup";
 import Table from "./Table";
+import TableEntry from "./TableEntry";
+import { readAll, create, update, remove } from './api'
 
 export class App {
-    constructor() {
+    constructor(storageKey) {
         this.container = null
+        this.storageKey = storageKey || 'cars'
         this.cars = []
-        this.brand = ""
-        this.model = ""
-        this.year = ""
-        this.localStorageKey = ""
+        this.isLoading = true
+        this.hasError = false
     }
 
     addToTheTable() {
@@ -39,97 +40,41 @@ export class App {
         else return
 
     }
+    renderCars() {
+        if (!Array.isArray(this.cars)) return
+        document.querySelector("tbody").innerHTML = ""
 
-    generateTimestampId() {
-        return Date.now() + '-' + Math.round(Math.random() * 1000000)
+        this.cars.forEach((carData) => {
+            const car = new TableEntry(
+                carData,
+                () => this.deleteTask(carData),
+                () => console.log("open popup")
+            )
+            document.querySelector("tbody").appendChild(car.render())
+        })
     }
 
-    saveToLocalStorage() {
-        const state = {
-            cars: this.cars
-        }
+    deleteTask(carData) {
+        const carKey = carData.key
 
-        localStorage.setItem(this.localStorageKey, JSON.stringify(state))
-    }
+        this.setLoading(true)
+        this.setError(false)
 
-    loadFromLocalStorage() {
-        const state = JSON.parse(localStorage.getItem(this.localStorageKey))
-        if (!state) return
-        this.cars = state.cars
+        return remove(this.storageKey, carKey)
+            .then(() => this.loadCar())
+            .catch(() => this.setError(true))
+            .finally(() => this.setLoading(false))
     }
 
     addCarToTheTable() {
-        const tableBody = document.querySelector("tbody")
-
-        const cars = this.cars
         const input1 = document.getElementById("brand")
         const input2 = document.getElementById("model")
         const input3 = document.getElementById("production-year")
 
         if (input1.value !== "" && input2.value !== "" && input3.value !== "") {
-
-            const tableRow = document.createElement("tr")
-
-            const tableRowElement1 = document.createElement("td")
-            tableRowElement1.innerText = cars[cars.length - 1].brand
-            tableRowElement1.classList.add("align-middle")
-            tableRowElement1.style.cursor = "pointer"
-            tableRowElement1.addEventListener("click", (event) => {
-                event.target.innerText = this.openPopup()
-            })
-
-            const tableRowElement2 = document.createElement("td")
-            tableRowElement2.innerText = cars[cars.length - 1].model
-            tableRowElement2.classList.add("car__model", "align-middle")
-            tableRowElement2.style.cursor = "pointer"
-            tableRowElement2.addEventListener("click", (event) => {
-                event.target.innerText = this.openPopup()
-            })
-
-            const tableRowElement3 = document.createElement("td")
-            tableRowElement3.innerText = cars[cars.length - 1].year
-            tableRowElement3.classList.add("align-middle")
-            tableRowElement3.style.cursor = "pointer"
-            tableRowElement3.addEventListener("click", (event) => {
-                event.target.innerText = this.openPopup()
-            })
-
-            const tableRowElement4 = document.createElement("td")
-
-            const deleteButton = new Button("", (e) => this.deleteRow(e), ['btn', 'btn-danger', "delete__button"])
-
-            const deleteButtonRendered = deleteButton.render()
-            deleteButtonRendered.innerHTML = `<i class="far fa-trash-alt"></i>`
-            tableRowElement4.appendChild(deleteButtonRendered)
-
-            tableRow.append(tableRowElement1, tableRowElement2, tableRowElement3, tableRowElement4)
-
-            tableBody.appendChild(tableRow)
-
-            return tableBody
+            this.addCar(input1.value, input2.value, input3.value)
         }
         else return
-
-    }
-
-    deleteRow(e) {
-        console.log("usun wiersz")
-    }
-
-    onNewCarSubmit() {
-        const input1 = document.getElementById("brand")
-        const input2 = document.getElementById("model")
-        const input3 = document.getElementById("production-year")
-
-        this.cars = this.cars.concat({
-            brand: input1.value,
-            model: input2.value,
-            year: input3.value,
-            id: this.generateTimestampId(),
-        })
-
-        this.saveToLocalStorage()
-        this.addCarToTheTable()
     }
 
     openPopup() {
@@ -138,6 +83,7 @@ export class App {
     }
 
     sort() {
+        console.log("sortowanie")
         const getCellValue = (tr, idx) => tr.children[idx].innerText || tr.children[idx].textContent
 
         const comparer = (idx, asc) => (a, b) => ((v1, v2) =>
@@ -176,11 +122,50 @@ export class App {
         }
     }
 
+    setLoading(newLoading) {
+        this.isLoading = newLoading
+        // this.render()
+    }
+
+    setError(newError) {
+        this.hasError = newError
+        // this.render()
+    }
+
+    addCar(brand, model, year) {
+        const newCarData = {
+            brand: brand,
+            model: model,
+            productionYear: year,
+            createdAt: (new Date()).toISOString(),
+        }
+        this.setLoading(true)
+        this.setError(false)
+
+        return create(this.storageKey, newCarData)
+            .then(() => this.loadCar())
+    }
+
+    loadCar() {
+        this.setLoading(true)
+        this.setError(false)
+        return readAll(this.storageKey)
+            .then((data) => {
+                if (Array.isArray(data) || data === null) {
+                    this.cars = data || []
+                } else {
+                    this.setError(true)
+                }
+                this.renderCars()
+            })
+            .catch(() => this.setError(true))
+            .finally(() => this.setLoading(false))
+    }
+
     render() {
         if (!this.container) {
             this.container = document.createElement('div')
         }
-
         this.container.innerHTML = ''
 
         this.container.classList.add("container-md")
@@ -200,19 +185,14 @@ export class App {
         const labelElement3 = new Label("Rok produkcji", ['input-group-text', 'col'])
 
         const submitButton = new Button("DODAJ", () => {
-            this.onNewCarSubmit()
-            this.sort()
+            this.addCarToTheTable()
         }, ['btn', 'btn-outline-success', "w-100"])
 
         const inputGroupElement4 = new InputGroup(["input-group", "mb-3"])
         const inputElement4 = new Input("Szukaj model", ['form-control'], "text", "false", "filter")
         const filterButton = new Button("", () => this.filter(), ['btn', 'btn-info'])
 
-
-
-        const table = new Table(['Marka pojazdu', 'Model pojazdu', 'Rok produkcji', "Usuń"], ['Marka pojazdu', 'Model pojazdu', 'Rok produkcji', "Usuń"], ['table', 'table-striped', 'thead-dark', "table-hover"])
-
-        this.loadFromLocalStorage()
+        const table = new Table(['Marka pojazdu', 'Model pojazdu', 'Rok produkcji', "Usuń"], ['Marka pojazdu', 'Model pojazdu', 'Rok produkcji', "Usuń"], ['table', 'table-striped', 'thead-dark', "table-hover"], () => this.sort())
 
         const inputGroupElement1Rendered = inputGroupElement1.render()
         inputGroupElement1Rendered.appendChild(labelElement1.render())
@@ -248,7 +228,7 @@ export class App {
         this.container.appendChild(inputGroupElement4Rendered)
         const tableRendered = table.render()
         this.container.appendChild(tableRendered)
-        this.sort()
+        this.loadCar()
 
         return this.container
     }
