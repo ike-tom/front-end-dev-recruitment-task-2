@@ -4,7 +4,7 @@ import Label from "./Label";
 import InputGroup from "./InputGroup";
 import Table from "./Table";
 import TableEntry from "./TableEntry";
-import { readAll, create, update, remove } from './api'
+import { readAll, create, remove } from './api'
 
 export class App {
     constructor(storageKey) {
